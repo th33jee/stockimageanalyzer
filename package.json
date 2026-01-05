@@ -7,13 +7,13 @@
   "author": "You",
   "license": "MIT",
   "scripts": {
-    "react-start": "react-scripts start",
-    "react-build": "react-scripts build",
+    "react-start": "cd frontend && npm start",
+    "react-build": "cd frontend && npm run build",
     "electron-start": "electron .",
     "electron-dev": "concurrently \"npm run react-start\" \"wait-on http://localhost:3000 && npm run electron-start\"",
     "electron-build": "npm run react-build && electron-builder",
     "build": "npm run electron-build",
-    "start": "npm run electron-dev"
+    "start": "concurrently \"npm run react-start\" \"wait-on http://localhost:3000 && npm run electron-start\""
   },
   "dependencies": {
     "concurrently": "^9.2.1",

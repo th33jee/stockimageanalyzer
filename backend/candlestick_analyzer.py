@@ -683,33 +683,6 @@ class CandlestickAnalyzer:
             strength = max(0, min(40, strength))  # Cap sideways at 40
         
         return prediction, strength
-                    score += 10
-                elif rsi < 40:
-                    score -= 10
-        
-        # Price action near support/resistance (5 points)
-        if len(candles) >= 5:
-            levels = self._find_key_levels(candles)
-            current_price = candles[-1].close
-            
-            supports = levels.get("support", [])
-            resistances = levels.get("resistance", [])
-            
-            if supports:
-                support_distance = abs(current_price - supports[0]) / supports[0]
-                if support_distance < 0.02:  # Within 2% of support
-                    score += 5
-            
-            if resistances:
-                resistance_distance = abs(current_price - resistances[0]) / resistances[0]
-                if resistance_distance < 0.02:  # Within 2% of resistance
-                    score -= 5
-        
-        # Ensure score is between 0-100
-        confidence = max(0, min(100, score))
-        prediction = "UP" if confidence > 50 else "DOWN"
-        
-        return prediction, int(confidence)
     
     def _calculate_levels(self, candles: List[Candle], prediction: str) -> Tuple[str, str]:
         """Calculate stop loss and take profit levels."""
