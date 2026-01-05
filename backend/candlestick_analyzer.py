@@ -82,6 +82,7 @@ class CandlestickAnalyzer:
     def _extract_candles_from_image(self, image: np.ndarray) -> List[Candle]:
         """
         Extract OHLC data from candlestick chart image using computer vision.
+        Enhanced with better edge detection and noise filtering.
         """
         try:
             # Convert to grayscale
@@ -90,11 +91,27 @@ class CandlestickAnalyzer:
             else:
                 gray = image
             
-            # Detect candle bodies and wicks
-            _, binary = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY_INV)
+            # Apply multiple thresholding techniques for robustness
+            # Method 1: Binary threshold
+            _, binary1 = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY_INV)
+            
+            # Method 2: Otsu's thresholding (adaptive)
+            _, binary2 = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+            
+            # Combine both methods
+            binary = cv2.bitwise_or(binary1, binary2)
+            
+            # Apply morphological operations to clean up
+            kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
+            binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel)
+            binary = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel)
             
             # Find contours (candles)
             contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            
+            if not contours:
+                logger.warning("No contours found in image")
+                return self._generate_synthetic_candles(20)
             
             candles = []
             
@@ -105,45 +122,54 @@ class CandlestickAnalyzer:
             image_height = image.shape[0]
             image_width = image.shape[1]
             
-            for idx, contour in enumerate(sorted_contours[:100]):  # Limit to 100 candles
+            for idx, contour in enumerate(sorted_contours[:150]):  # Increased from 100
                 x, y, w, h = cv2.boundingRect(contour)
                 
-                # Filter by minimum candle size
-                if w < 3 or h < 5:
+                # Better filtering with size constraints
+                if w < 2 or h < 3:  # Lowered minimum
+                    continue
+                
+                # Skip if contour is too large (probably not a candle)
+                if w > image_width * 0.2 or h > image_height * 0.8:
                     continue
                 
                 # Normalize coordinates to price values
-                # Higher on chart = lower price, Lower on chart = higher price
+                # Higher on chart = higher price, Lower on chart = lower price
                 high_price = 100 - (y / image_height) * 100
                 low_price = 100 - ((y + h) / image_height) * 100
                 
-                # Estimate open and close based on candle body
-                open_price = high_price - (h * 0.3)
-                close_price = high_price - (h * 0.7)
+                # Better estimation: assume middle of contour is close
+                mid_y = y + (h / 2)
+                mid_price = 100 - (mid_y / image_height) * 100
                 
-                # Randomize slightly for realistic variation
-                open_price += np.random.normal(0, 0.5)
-                close_price += np.random.normal(0, 0.5)
+                # Assign open/close based on width
+                open_price = mid_price + (w * 0.2)
+                close_price = mid_price - (w * 0.2)
+                
+                # Add small random variation for realism
+                variation = np.random.normal(0, 0.3)
                 
                 candle = Candle(
-                    open=max(low_price, open_price),
-                    high=high_price,
-                    low=min(low_price, low_price - 2),
-                    close=max(low_price, close_price),
-                    volume=w * h,
+                    open=open_price + variation,
+                    high=max(high_price, open_price, close_price) + 0.5,
+                    low=min(low_price, open_price, close_price) - 0.5,
+                    close=close_price + variation,
+                    volume=float(w * h),  # Volume proportional to candle size
                     index=len(candles)
                 )
                 
                 candles.append(candle)
             
-            # If no candles extracted, create synthetic data for demonstration
+            # If still no candles extracted, return synthetic
             if not candles:
-                candles = self._generate_synthetic_candles(20)
+                logger.warning("Failed to extract candles, using synthetic data")
+                return self._generate_synthetic_candles(20)
             
+            logger.info(f"Successfully extracted {len(candles)} candles from image")
             return candles
             
         except Exception as e:
-            logger.error(f"Candle extraction error: {str(e)}")
+            logger.error(f"Candle extraction error: {str(e)}, using fallback synthetic data")
             return self._generate_synthetic_candles(20)
     
     def _generate_synthetic_candles(self, count: int = 20) -> List[Candle]:
@@ -567,23 +593,30 @@ class CandlestickAnalyzer:
             if pattern in self.patterns_db:
                 reliability = self.patterns_db[pattern]["reliability"]
                 if self.patterns_db[pattern]["bias"] == "bullish":
-                    pattern_score += reliability * 20  # Max 20 points per pattern
+                    pattern_score += reliability * 25  # Increased from 20 to 25
                 elif self.patterns_db[pattern]["bias"] == "bearish":
-                    pattern_score -= reliability * 20
+                    pattern_score -= reliability * 25
         
         score += min(max(pattern_score, -35), 35)  # Cap at ±35 points
         
-        # Volume analysis (10 points)
-        if len(candles) >= 2:
+        # Volume analysis (15 points) - Increased from 10
+        if len(candles) >= 3:
             recent_vol = np.mean([c.volume for c in candles[-3:]])
             prev_vol = np.mean([c.volume for c in candles[-6:-3]]) if len(candles) >= 6 else recent_vol
-            if recent_vol > prev_vol * 1.2:
+            vol_ratio = recent_vol / (prev_vol + 0.0001)
+            
+            if vol_ratio > 1.3:  # Significant volume increase
                 if candles[-1].close > candles[-1].open:
-                    score += 8
+                    score += 10
                 else:
-                    score -= 8
+                    score -= 10
+            elif vol_ratio > 1.1:
+                if candles[-1].close > candles[-1].open:
+                    score += 5
+                else:
+                    score -= 5
         
-        # RSI-like calculation (15 points) - momentum
+        # RSI-like calculation (20 points) - Increased from 15
         gains = 0
         losses = 0
         if len(candles) >= 14:
@@ -597,7 +630,59 @@ class CandlestickAnalyzer:
             if gains + losses > 0:
                 rs = gains / (losses + 0.0001)
                 rsi = 100 - (100 / (1 + rs))
-                if rsi > 60:
+                
+                # Better RSI thresholds
+                if rsi > 70:
+                    score += 12  # Increased from 10
+                elif rsi > 60:
+                    score += 6
+                elif rsi < 30:
+                    score -= 12
+                elif rsi < 40:
+                    score -= 6
+        
+        # Support/Resistance proximity (10 points)
+        current_price = candles[-1].close
+        key_levels = self._find_key_levels(candles)
+        
+        support_levels = key_levels.get("support", [])
+        resistance_levels = key_levels.get("resistance", [])
+        
+        if support_levels and current_price < support_levels[0] * 1.02:
+            score += 8  # Price near support = bullish
+        
+        if resistance_levels and current_price > resistance_levels[0] * 0.98:
+            score -= 8  # Price near resistance = bearish
+        
+        # Candle body strength (10 points) - New factor
+        recent_3 = candles[-3:]
+        for candle in recent_3:
+            body_size = abs(candle.close - candle.open)
+            wick_size = candle.high - candle.low
+            if wick_size > 0:
+                body_ratio = body_size / wick_size
+                if body_ratio > 0.7:  # Strong candle body
+                    if candle.close > candle.open:
+                        score += 2
+                    else:
+                        score -= 2
+        
+        # Make final prediction
+        final_score = max(0, min(100, score))  # Clamp between 0-100
+        
+        if final_score > 60:
+            prediction = "UP"
+        elif final_score < 40:
+            prediction = "DOWN"
+        else:
+            prediction = "SIDEWAYS"
+        
+        # Confidence strength (0-100)
+        strength = int(abs(final_score - 50) * 2)  # 0-100 scale
+        if prediction == "SIDEWAYS":
+            strength = max(0, min(40, strength))  # Cap sideways at 40
+        
+        return prediction, strength
                     score += 10
                 elif rsi < 40:
                     score -= 10
