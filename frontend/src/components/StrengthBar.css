@@ -1,0 +1,70 @@
+.strength-bar-container {
+  margin: 20px 0;
+  padding: 20px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.strength-bar {
+  display: flex;
+  height: 50px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  background: #f0f0f0;
+}
+
+.strength-side {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.5s ease;
+  position: relative;
+  min-width: 0;
+}
+
+.strength-side.green {
+  background: linear-gradient(90deg, #22c55e, #16a34a);
+  color: white;
+}
+
+.strength-side.red {
+  background: linear-gradient(90deg, #ef4444, #dc2626);
+  color: white;
+}
+
+.strength-divider {
+  width: 3px;
+  background: white;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+}
+
+.strength-label {
+  font-weight: bold;
+  font-size: 14px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
+}
+
+.strength-percentage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 12px;
+  gap: 5px;
+}
+
+.percentage-value {
+  font-size: 32px;
+  font-weight: bold;
+  color: #1f2937;
+}
+
+.confidence-label {
+  font-size: 12px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}

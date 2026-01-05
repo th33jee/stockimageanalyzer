@@ -1,0 +1,136 @@
+stockimageanalyzer/
+│
+├── 📄 START_HERE.md                    ⭐ BEGIN HERE - Quick guide
+├── 📄 README.md                        📚 Full documentation
+├── 📄 WHATS_INCLUDED.md                ✨ Feature overview
+├── 📄 SETUP_GUIDE.md                   🔧 Complete setup guide
+├── 📄 DEPLOYMENT_CHECKLIST.md          🚀 Deployment steps
+├── 📄 ARCHITECTURE.md                  🏗️ System design
+├── 📄 INVENTORY.md                     📋 File listing
+│
+├── 🐋 docker-compose.yml               Docker orchestration
+├── 🌐 nginx.conf                       Web server config
+│
+├── 🔧 quickstart.sh                    Bash quick start (Mac/Linux)
+├── 🔧 quickstart.bat                   Batch quick start (Windows)
+│
+│
+├── 📁 backend/                         🐍 Python FastAPI Backend
+│   │
+│   ├── main.py                         API endpoints & setup
+│   │   ├── FastAPI application
+│   │   ├── CORS configuration
+│   │   └── Routes:
+│   │       ├── GET /
+│   │       ├── POST /analyze
+│   │       ├── POST /batch-analyze
+│   │       └── GET /health
+│   │
+│   ├── candlestick_analyzer.py         Pattern recognition engine (800+ lines)
+│   │   ├── Candle class
+│   │   ├── CandlestickAnalyzer class
+│   │   ├── Image processing
+│   │   ├── 20+ pattern detection methods
+│   │   ├── Trend analysis
+│   │   ├── Support/Resistance detection
+│   │   ├─ Prediction engine
+│   │   └── SL/TP calculation
+│   │
+│   ├── requirements.txt                Python dependencies
+│   │   ├── fastapi, uvicorn
+│   │   ├── opencv-python
+│   │   ├── numpy, pandas
+│   │   ├── tensorflow, keras
+│   │   └── ... (20 packages)
+│   │
+│   ├── Dockerfile                      Docker build config
+│   ├── .env.example                    Environment template
+│   └── .gitignore (recommended)
+│
+│
+├── 📁 frontend/                        ⚛️ React 18 Frontend
+│   │
+│   ├── src/
+│   │   │
+│   │   ├── App.js                      Main component (250+ lines)
+│   │   │   ├── Upload state management
+│   │   │   ├── Image upload handler
+│   │   │   ├── API integration
+│   │   │   ├── Results display
+│   │   │   └── Error handling
+│   │   │
+│   │   ├── App.css                     Styling (400+ lines)
+│   │   │   ├── Gradient theme
+│   │   │   ├── Responsive design
+│   │   │   ├── Animations
+│   │   │   └── Mobile media queries
+│   │   │
+│   │   ├── components/
+│   │   │   │
+│   │   │   ├── AnalysisResult.js       Results display component
+│   │   │   │   ├── Prediction display
+│   │   │   │   ├── SL/TP cards
+│   │   │   │   ├── Patterns badges
+│   │   │   │   ├── Key levels display
+│   │   │   │   ├── Detailed analysis
+│   │   │   │   └── Trading setup
+│   │   │   │
+│   │   │   ├── StrengthBar.js          Visual strength indicator
+│   │   │   │   ├── Green/Red bar
+│   │   │   │   ├─ Percentage display
+│   │   │   │   └── Confidence label
+│   │   │   │
+│   │   │   ├── StrengthBar.css         Strength bar styling
+│   │   │   │
+│   │   │   ├── LoadingSpinner.js       Loading animation
+│   │   │   │
+│   │   │   └── LoadingSpinner.css      Spinner styling
+│   │   │
+│   │   ├── index.js                    React root setup
+│   │   └── index.css                   Global styles
+│   │
+│   ├── public/
+│   │   └── index.html                  HTML5 template
+│   │
+│   ├── package.json                    NPM configuration
+│   │   ├── Dependencies:
+│   │   │   ├── react@18.2.0
+│   │   │   ├── axios
+│   │   │   ├── react-dropzone
+│   │   │   ├── recharts
+│   │   │   └── react-icons
+│   │   │
+│   │   └── Scripts: start, build, test
+│   │
+│   ├── .env.example                    Environment template
+│   ├── Dockerfile                      Docker build config
+│   └── .gitignore (recommended)
+│
+│
+├── 📊 Statistics
+│   ├── Python Code: 1000+ lines
+│   ├── JavaScript Code: 400+ lines
+│   ├── CSS: 500+ lines
+│   ├── Configuration: 200+ lines
+│   ├── Documentation: 1500+ lines
+│   └── Total: 5000+ lines, 30+ files
+│
+│
+└── 🎯 Quick Reference
+    │
+    ├── To Start Locally:
+    │   └─ Run: quickstart.bat or bash quickstart.sh
+    │
+    ├── To Understand:
+    │   └─ Read: START_HERE.md → README.md → ARCHITECTURE.md
+    │
+    ├── To Deploy:
+    │   └─ Read: DEPLOYMENT_CHECKLIST.md
+    │
+    ├── To Modify:
+    │   └─ Edit: backend/candlestick_analyzer.py (patterns)
+    │             frontend/src/App.css (UI)
+    │
+    └── For Help:
+        └─ Check: SETUP_GUIDE.md (comprehensive)
+                  or specific file documentation
