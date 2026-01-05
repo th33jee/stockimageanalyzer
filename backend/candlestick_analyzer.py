@@ -584,6 +584,140 @@ class CandlestickAnalyzer:
         closes = [c.close for c in candles[-6:]]
         return np.std(closes[-4:]) < np.std(closes[:2])
     
+    def _is_head_and_shoulders(self, candles: List[Candle]) -> bool:
+        """Detect Head and Shoulders pattern - reversal pattern."""
+        if len(candles) < 5:
+            return False
+        
+        # Look for left shoulder, head, right shoulder
+        for i in range(1, len(candles) - 3):
+            left_shoulder = candles[i]
+            head = candles[i + 1]
+            right_shoulder = candles[i + 2]
+            
+            # Head should be higher than shoulders
+            if (head.high > left_shoulder.high and 
+                head.high > right_shoulder.high and
+                left_shoulder.high > left_shoulder.low * 0.95 and
+                right_shoulder.high > right_shoulder.low * 0.95):
+                return True
+        
+        return False
+    
+    def _is_inverse_head_and_shoulders(self, candles: List[Candle]) -> bool:
+        """Detect Inverse Head and Shoulders - bullish reversal."""
+        if len(candles) < 5:
+            return False
+        
+        # Look for inverted pattern
+        for i in range(1, len(candles) - 3):
+            left_shoulder = candles[i]
+            head = candles[i + 1]
+            right_shoulder = candles[i + 2]
+            
+            # Head should be lower than shoulders (inverted)
+            if (head.low < left_shoulder.low and 
+                head.low < right_shoulder.low and
+                left_shoulder.low < left_shoulder.high * 1.05 and
+                right_shoulder.low < right_shoulder.high * 1.05):
+                return True
+        
+        return False
+    
+    
+    def _analyze_historical_patterns(self, candles: List[Candle]) -> int:
+        """Analyze historical price movements and candle patterns for prediction."""
+        if len(candles) < 5:
+            return 0
+        
+        score = 0
+        
+        # 1. Recent candle strength (bullish vs bearish)
+        bullish_count = sum(1 for c in candles[-5:] if c.close > c.open)
+        bearish_count = 5 - bullish_count
+        
+        if bullish_count > bearish_count:
+            score += (bullish_count - bearish_count) * 2
+        else:
+            score -= (bearish_count - bullish_count) * 2
+        
+        # 2. Momentum - acceleration of uptrend or downtrend
+        if len(candles) >= 8:
+            recent_changes = []
+            for i in range(len(candles)-7, len(candles)):
+                change = (candles[i].close - candles[i-1].close) / candles[i-1].close
+                recent_changes.append(change)
+            
+            momentum = sum(recent_changes)
+            if momentum > 0.02:  # Strong bullish momentum
+                score += 10
+            elif momentum > 0:  # Weak bullish momentum
+                score += 5
+            elif momentum < -0.02:  # Strong bearish momentum
+                score -= 10
+            elif momentum < 0:  # Weak bearish momentum
+                score -= 5
+        
+        # 3. Support and Resistance bounce
+        if len(candles) >= 10:
+            recent_lows = min(c.low for c in candles[-10:-5])
+            recent_highs = max(c.high for c in candles[-10:-5])
+            current_price = candles[-1].close
+            
+            # Bouncing off support (bullish)
+            if candles[-2].low < recent_lows * 1.01 and current_price > candles[-2].close:
+                score += 12
+            
+            # Breaking resistance (bullish)
+            if candles[-1].high > recent_highs * 0.99:
+                score += 8
+        
+        # 4. Volume surge analysis
+        if len(candles) >= 5:
+            vol_trend = [candles[i].volume for i in range(len(candles)-5, len(candles))]
+            avg_vol = np.mean(vol_trend)
+            current_vol = candles[-1].volume
+            
+            if current_vol > avg_vol * 1.5:
+                # High volume with bullish candle = strength
+                if candles[-1].close > candles[-1].open:
+                    score += 8
+                else:
+                    score -= 8
+        
+        # 5. Volatility compression (breakout signal)
+        if len(candles) >= 8:
+            past_volatility = max([abs(c.close - c.open) for c in candles[-8:-4]])
+            current_volatility = abs(candles[-1].close - candles[-1].open)
+            
+            if past_volatility > current_volatility * 2:  # Low volatility period
+                if candles[-1].close > np.mean([c.close for c in candles[-5:-1]]):
+                    score += 5  # Potential breakout up
+            elif current_volatility > past_volatility * 1.5:
+                if candles[-1].close > candles[-1].open:
+                    score += 6  # Breakout with bullish candle
+                else:
+                    score -= 6  # Breakout with bearish candle
+        
+        # 6. Consecutive pattern strength
+        consecutive_bullish = 0
+        consecutive_bearish = 0
+        for i in range(len(candles)-1, max(0, len(candles)-6), -1):
+            if candles[i].close > candles[i].open:
+                consecutive_bullish += 1
+                consecutive_bearish = 0
+            else:
+                consecutive_bearish += 1
+                consecutive_bullish = 0
+        
+        if consecutive_bullish >= 3:
+            score += consecutive_bullish * 2  # Up to 10 points
+        elif consecutive_bearish >= 3:
+            score -= consecutive_bearish * 2  # Up to -10 points
+        
+        # Cap the score contribution
+        return max(min(score, 20), -20)
+    
     def _analyze_trend(self, candles: List[Candle]) -> Dict:
         """Analyze primary and secondary trends."""
         if len(candles) < 3:
@@ -649,19 +783,25 @@ class CandlestickAnalyzer:
         }
     
     def _make_prediction(self, candles: List[Candle], patterns: List[str], trend_analysis: Dict) -> Tuple[str, int]:
-        """Make UP/DOWN prediction with enhanced confidence scoring."""
+        """Make UP/DOWN prediction with data-driven confidence scoring."""
         score = 50  # Start neutral
         
-        # Trend analysis (40 points) - Enhanced with better weighting
+        # HISTORICAL PATTERN ANALYSIS - Analyze past candle movements
+        historical_score = self._analyze_historical_patterns(candles)
+        
+        # Trend analysis (35 points) - Enhanced with better weighting
         trend = trend_analysis.get("trend", "UNKNOWN")
         if "UPTREND" in trend:
-            score += 35
+            score += 30
         elif "DOWNTREND" in trend:
-            score -= 35
+            score -= 30
         elif "WEAK_UPTREND" in trend:
-            score += 18
+            score += 15
         elif "WEAK_DOWNTREND" in trend:
-            score -= 18
+            score -= 15
+        
+        # Add historical analysis weight (20 points)
+        score += historical_score
         
         # Pattern analysis (40 points) - Enhanced pattern recognition
         bullish_patterns = [
