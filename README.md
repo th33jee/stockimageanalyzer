@@ -1,18 +1,19 @@
-# Stock Chart Analysis Bot - README
+# Stock Chart Analysis Bot - Desktop Application
 
 <div align="center">
 
 # 📊 Stock Analysis Bot
 
-**AI-Powered Candlestick Pattern Recognition & Technical Analysis**
+**AI-Powered Candlestick Pattern Recognition & Technical Analysis**  
+**Now Available as a Desktop Application! 🖥️**
 
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-blue)](https://www.python.org/)
 [![React 18](https://img.shields.io/badge/React-18-blue)](https://react.dev/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Latest-green)](https://fastapi.tiangolo.com/)
-[![Docker](https://img.shields.io/badge/Docker-Supported-blue)](https://www.docker.com/)
+[![Electron](https://img.shields.io/badge/Electron-39-blue)](https://www.electronjs.org/)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
-[Features](#-features) • [Quick Start](#-quick-start) • [API](#-api) • [Deployment](#-deployment) • [Documentation](#-documentation)
+[Quick Start](#quick-start) • [Features](#-features) • [How to Use](#-how-to-use) • [Troubleshooting](#-troubleshooting)
 
 </div>
 
@@ -20,18 +21,19 @@
 
 ## 🎯 Overview
 
-Stock Analysis Bot is a full-stack application that analyzes candlestick chart images and provides:
+Stock Analysis Bot is now a **standalone desktop application** that analyzes candlestick chart images and provides:
 
 - **Prediction**: UP or DOWN with confidence level (0-100%)
 - **Trading Setup**: Entry points, Stop Loss, Take Profit targets
-- **Pattern Recognition**: Identifies 30+ candlestick and chart patterns
-- **Technical Analysis**: Trend analysis, support/resistance levels, volume analysis
-- **Visual Strength Bar**: Interactive green/red bar showing prediction confidence
+- **Pattern Recognition**: Identifies 28+ candlestick patterns
+- **Technical Analysis**: Trend analysis, support/resistance levels, RSI analysis
+- **Local Processing**: All analysis happens on your computer - no cloud uploads
+- **Simple Interface**: Drag-and-drop chart upload with instant results
 
 ### Perfect For:
 - Traders learning technical analysis
-- Algorithmic trading system development
-- Chart pattern research and backtesting
+- Quick chart pattern identification
+- Backtesting chart patterns
 - Educational trading platform
 
 ---

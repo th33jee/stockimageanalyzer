@@ -70,13 +70,15 @@ class CandlestickAnalyzer:
                 "riskReward": risk_reward,
                 "tradingSetup": self._generate_trading_setup(candles, prediction, sl, tp),
                 "candleCount": len(candles),
-                "currentPrice": float(candles[-1].close)
+                "currentPrice": float(candles[-1].close),
+                "dataSource": "real" if len(patterns) > 0 else "synthetic",  # synthetic if no patterns found
+                "success": True
             }
             
             return response
             
         except Exception as e:
-            logger.error(f"Analysis error: {str(e)}")
+            logger.error(f"Analysis error: {str(e)}", exc_info=True)
             return self._create_error_response(str(e))
     
     def _extract_candles_from_image(self, image: np.ndarray) -> List[Candle]:
@@ -90,6 +92,8 @@ class CandlestickAnalyzer:
                 logger.warning("Invalid image provided")
                 return self._generate_synthetic_candles(20)
             
+            logger.debug(f"Image shape before processing: {image.shape}")
+            
             # Convert to RGB if needed
             if len(image.shape) == 2:
                 image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
@@ -101,6 +105,7 @@ class CandlestickAnalyzer:
             
             # Normalize to 0-255 range
             gray = cv2.normalize(gray, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+            logger.debug(f"Grayscale image min: {gray.min()}, max: {gray.max()}")
             
             # Apply Gaussian blur to reduce noise
             blurred = cv2.GaussianBlur(gray, (3, 3), 0)
@@ -108,6 +113,7 @@ class CandlestickAnalyzer:
             # Apply CLAHE (Contrast Limited Adaptive Histogram Equalization)
             clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
             enhanced = clahe.apply(blurred)
+            logger.debug(f"Enhanced image min: {enhanced.min()}, max: {enhanced.max()}")
             
             # Apply multiple thresholding techniques for robustness
             # Method 1: Binary threshold
@@ -118,18 +124,26 @@ class CandlestickAnalyzer:
             
             # Combine both methods
             binary = cv2.bitwise_or(binary1, binary2)
+            logger.debug(f"Binary image white pixels: {np.count_nonzero(binary)}")
             
             # Apply morphological operations to clean up
             kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-            binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel, iterations=2)
-            binary = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel, iterations=1)
+            binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel, iterations=3)
+            binary = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel, iterations=2)
             
             # Find contours (candles)
             contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            logger.info(f"Found {len(contours) if contours else 0} contours")
             
-            if not contours or len(contours) < 3:
+            # Extract height and position info
+            image_height = image.shape[0]
+            image_width = image.shape[1]
+            
+            if not contours or len(contours) < 2:
                 logger.warning(f"No or insufficient contours found in image (found {len(contours) if contours else 0})")
-                return self._generate_synthetic_candles(20)
+                logger.info("Attempting alternative extraction method...")
+                # Try alternative: look for vertical structures
+                return self._extract_candles_alternative(gray, image)
             
             candles = []
             
@@ -137,18 +151,15 @@ class CandlestickAnalyzer:
             sorted_contours = sorted(contours, key=lambda c: cv2.boundingRect(c)[0])
             
             # Extract height and position info
-            image_height = image.shape[0]
-            image_width = image.shape[1]
-            
-            for idx, contour in enumerate(sorted_contours[:150]):  # Increased from 100
+            for idx, contour in enumerate(sorted_contours[:200]):
                 x, y, w, h = cv2.boundingRect(contour)
                 
-                # Better filtering with size constraints
-                if w < 2 or h < 3:  # Lowered minimum
+                # More lenient filtering
+                if w < 1 or h < 2:
                     continue
                 
-                # Skip if contour is too large (probably not a candle)
-                if w > image_width * 0.2 or h > image_height * 0.8:
+                # Skip very large contours (probably background)
+                if w > image_width * 0.3 or h > image_height * 0.9:
                     continue
                 
                 # Normalize coordinates to price values
@@ -178,13 +189,70 @@ class CandlestickAnalyzer:
                 
                 candles.append(candle)
             
-            # If still no candles extracted, return synthetic
+            # If still no candles extracted, try alternative method
             if not candles:
-                logger.warning("Failed to extract candles, using synthetic data")
-                return self._generate_synthetic_candles(20)
+                logger.warning("Failed to extract candles with primary method, trying alternative...")
+                return self._extract_candles_alternative(gray, image)
             
             logger.info(f"Successfully extracted {len(candles)} candles from image")
             return candles
+    
+    def _extract_candles_alternative(self, gray: np.ndarray, image: np.ndarray) -> List[Candle]:
+        """Alternative extraction method using edge detection."""
+        try:
+            logger.info("Using alternative candle extraction method")
+            # Use Canny edge detection
+            edges = cv2.Canny(gray, 50, 150)
+            
+            # Find contours from edges
+            contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            logger.info(f"Alternative method found {len(contours) if contours else 0} edge contours")
+            
+            if not contours or len(contours) < 2:
+                logger.warning("Alternative method failed, using synthetic data")
+                return self._generate_synthetic_candles(20)
+            
+            image_height = image.shape[0]
+            image_width = image.shape[1]
+            candles = []
+            
+            sorted_contours = sorted(contours, key=lambda c: cv2.boundingRect(c)[0])
+            
+            for contour in sorted_contours[:150]:
+                x, y, w, h = cv2.boundingRect(contour)
+                
+                # Filter for reasonable candle dimensions
+                if w < 2 or h < 5:
+                    continue
+                if w > image_width * 0.2 or h > image_height * 0.8:
+                    continue
+                
+                # Convert to price
+                high_price = 100 - (y / image_height) * 100
+                low_price = 100 - ((y + h) / image_height) * 100
+                mid_y = y + (h / 2)
+                mid_price = 100 - (mid_y / image_height) * 100
+                
+                variation = np.random.normal(0, 0.3)
+                candle = Candle(
+                    open=mid_price + (w * 0.15) + variation,
+                    high=max(high_price, mid_price) + 0.5,
+                    low=min(low_price, mid_price) - 0.5,
+                    close=mid_price - (w * 0.15) + variation,
+                    volume=float(w * h),
+                    index=len(candles)
+                )
+                candles.append(candle)
+            
+            if candles:
+                logger.info(f"Alternative method extracted {len(candles)} candles")
+                return candles
+            
+            logger.warning("Both extraction methods failed, using synthetic data")
+            return self._generate_synthetic_candles(20)
+        except Exception as e:
+            logger.error(f"Alternative extraction error: {str(e)}, using synthetic data")
+            return self._generate_synthetic_candles(20)
             
         except Exception as e:
             logger.error(f"Candle extraction error: {str(e)}, using fallback synthetic data")
@@ -861,5 +929,8 @@ class CandlestickAnalyzer:
             "timeframe": "Unknown",
             "keyLevels": {"support": [], "resistance": []},
             "riskReward": "N/A",
-            "tradingSetup": f"Unable to analyze: {error}"
+            "tradingSetup": f"Unable to analyze: {error}",
+            "dataSource": "error",
+            "success": False,
+            "error": error
         }

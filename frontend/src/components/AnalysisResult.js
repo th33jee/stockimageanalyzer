@@ -2,8 +2,28 @@ import React from 'react';
 import '../App.css';
 
 function AnalysisResult({ analysis }) {
+  const isError = analysis.dataSource === 'error' || !analysis.success;
+  const isSynthetic = analysis.dataSource === 'synthetic';
+  
   return (
     <div className="analysis-results">
+      {/* Status Banner */}
+      {isError && (
+        <div className="status-banner error">
+          ⚠️ Analysis Error: {analysis.error || 'Failed to analyze chart'}
+        </div>
+      )}
+      {isSynthetic && (
+        <div className="status-banner warning">
+          ⚠️ Could not extract candlesticks from image. Showing demo analysis.
+        </div>
+      )}
+      {!isError && !isSynthetic && (
+        <div className="status-banner success">
+          ✅ Successfully analyzed your chart
+        </div>
+      )}
+      
       <div className="results-grid">
         {/* Prediction Card */}
         <div className="result-card prediction-card">

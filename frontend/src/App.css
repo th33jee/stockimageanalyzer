@@ -181,6 +181,44 @@ body {
   box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
 }
 
+/* Status Banners */
+.status-banner {
+  padding: 15px 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-weight: 500;
+  animation: slideDown 0.4s ease;
+}
+
+.status-banner.error {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+}
+
+.status-banner.warning {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+}
+
+.status-banner.success {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Results Section */
 .results-section {
   animation: fadeIn 0.5s ease;
