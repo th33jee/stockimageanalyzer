@@ -85,32 +85,50 @@ class CandlestickAnalyzer:
         Enhanced with better edge detection and noise filtering.
         """
         try:
+            # Validate image
+            if image is None or image.size == 0:
+                logger.warning("Invalid image provided")
+                return self._generate_synthetic_candles(20)
+            
+            # Convert to RGB if needed
+            if len(image.shape) == 2:
+                image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+            elif image.shape[2] == 4:
+                image = cv2.cvtColor(image, cv2.COLOR_RGBA2RGB)
+            
             # Convert to grayscale
-            if len(image.shape) == 3:
-                gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-            else:
-                gray = image
+            gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+            
+            # Normalize to 0-255 range
+            gray = cv2.normalize(gray, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+            
+            # Apply Gaussian blur to reduce noise
+            blurred = cv2.GaussianBlur(gray, (3, 3), 0)
+            
+            # Apply CLAHE (Contrast Limited Adaptive Histogram Equalization)
+            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+            enhanced = clahe.apply(blurred)
             
             # Apply multiple thresholding techniques for robustness
             # Method 1: Binary threshold
-            _, binary1 = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY_INV)
+            _, binary1 = cv2.threshold(enhanced, 150, 255, cv2.THRESH_BINARY_INV)
             
             # Method 2: Otsu's thresholding (adaptive)
-            _, binary2 = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+            _, binary2 = cv2.threshold(enhanced, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
             
             # Combine both methods
             binary = cv2.bitwise_or(binary1, binary2)
             
             # Apply morphological operations to clean up
-            kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
-            binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel)
-            binary = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel)
+            kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+            binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel, iterations=2)
+            binary = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel, iterations=1)
             
             # Find contours (candles)
             contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             
-            if not contours:
-                logger.warning("No contours found in image")
+            if not contours or len(contours) < 3:
+                logger.warning(f"No or insufficient contours found in image (found {len(contours) if contours else 0})")
                 return self._generate_synthetic_candles(20)
             
             candles = []

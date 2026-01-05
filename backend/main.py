@@ -70,22 +70,50 @@ async def analyze_chart(file: UploadFile = File(...)):
     Returns comprehensive technical analysis with patterns, predictions, and trading setup.
     """
     try:
-        # Read and validate image
+        # Validate file
+        if not file.filename:
+            raise ValueError("No file provided")
+        
+        # Check file size (max 10MB)
         contents = await file.read()
-        image = Image.open(io.BytesIO(contents))
+        if len(contents) > 10 * 1024 * 1024:
+            raise ValueError("File size exceeds 10MB limit")
+        
+        if len(contents) == 0:
+            raise ValueError("File is empty")
+        
+        # Read and validate image
+        try:
+            image = Image.open(io.BytesIO(contents))
+        except Exception as e:
+            logger.error(f"Failed to open image: {str(e)}")
+            raise ValueError(f"Invalid image file: {str(e)}")
         
         # Convert to numpy array
         img_array = np.array(image)
         
-        logger.info(f"Processing image: {file.filename}, Shape: {img_array.shape}")
+        # Convert to RGB if needed
+        if len(img_array.shape) == 2:
+            # Grayscale image
+            img_array = np.stack([img_array] * 3, axis=-1)
+        elif img_array.shape[2] == 4:
+            # RGBA image
+            img_array = img_array[:, :, :3]
+        
+        logger.info(f"Processing image: {file.filename}, Shape: {img_array.shape}, Size: {len(contents)} bytes")
         
         # Analyze chart
         result = analyzer.analyze(img_array)
         
+        logger.info(f"Analysis complete for {file.filename}: {result.get('prediction', 'UNKNOWN')}")
+        
         return JSONResponse(content=result)
     
+    except ValueError as e:
+        logger.error(f"Validation error: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"Error analyzing chart: {str(e)}")
+        logger.error(f"Error analyzing chart: {str(e)}", exc_info=True)
         raise HTTPException(status_code=400, detail=f"Error analyzing image: {str(e)}")
 
 @app.post("/batch-analyze")
