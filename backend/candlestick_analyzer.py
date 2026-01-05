@@ -196,6 +196,15 @@ class CandlestickAnalyzer:
             
             logger.info(f"Successfully extracted {len(candles)} candles from image")
             return candles
+            
+        except Exception as e:
+            logger.error(f"Candle extraction error: {str(e)}, attempting alternative method...")
+            try:
+                gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+                return self._extract_candles_alternative(gray, image)
+            except Exception as e2:
+                logger.error(f"Alternative method also failed: {str(e2)}, using synthetic data")
+                return self._generate_synthetic_candles(20)
     
     def _extract_candles_alternative(self, gray: np.ndarray, image: np.ndarray) -> List[Candle]:
         """Alternative extraction method using edge detection."""
@@ -252,10 +261,6 @@ class CandlestickAnalyzer:
             return self._generate_synthetic_candles(20)
         except Exception as e:
             logger.error(f"Alternative extraction error: {str(e)}, using synthetic data")
-            return self._generate_synthetic_candles(20)
-            
-        except Exception as e:
-            logger.error(f"Candle extraction error: {str(e)}, using fallback synthetic data")
             return self._generate_synthetic_candles(20)
     
     def _generate_synthetic_candles(self, count: int = 20) -> List[Candle]:
