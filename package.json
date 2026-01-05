@@ -1,0 +1,68 @@
+{
+  "name": "stock-image-analyzer",
+  "version": "1.0.0",
+  "description": "Stock Chart Analysis Desktop App",
+  "main": "main.js",
+  "homepage": "./",
+  "author": "You",
+  "license": "MIT",
+  "scripts": {
+    "react-start": "react-scripts start",
+    "react-build": "react-scripts build",
+    "electron-start": "electron .",
+    "electron-dev": "concurrently \"npm run react-start\" \"wait-on http://localhost:3000 && npm run electron-start\"",
+    "electron-build": "npm run react-build && electron-builder",
+    "build": "npm run electron-build",
+    "start": "npm run electron-dev"
+  },
+  "dependencies": {
+    "concurrently": "^9.2.1",
+    "electron": "^39.2.7",
+    "electron-builder": "^26.0.12",
+    "electron-is-dev": "^3.0.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-scripts": "5.0.1",
+    "wait-on": "^9.0.3"
+  },
+  "build": {
+    "appId": "com.stockanalyzer.app",
+    "productName": "Stock Analyzer",
+    "files": [
+      "build/**/*",
+      "main.js",
+      "preload.js",
+      "backend/**/*",
+      "node_modules/**/*"
+    ],
+    "directories": {
+      "buildResources": "assets"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Stock Analyzer"
+    }
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
